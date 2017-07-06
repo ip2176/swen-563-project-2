@@ -71,3 +71,11 @@ void usart_write_data_string(char *message, ...){
 char usart_read_simple(){
   return USART_Read(USART2);
 }
+
+/*
+	This helper function wraps the real time write function and prints out
+	the terminal character the user should see
+*/
+void usart_terminal_character_simple(){
+	usart_real_time_write(ASCII_TERMINAL_CHARACTER, NO_NEWLINE);
+}

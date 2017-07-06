@@ -6,15 +6,17 @@
 
 /*
   Function to set the necessary bits in all of the GPIO registers to
-  enable the PA0 pin, the GPIO clock, and tie the PAO pin to the TIM2
-  timer
+  enable the PA0 pin, PA1 pin, the GPIO clock, and tie the PAO and PA1 
+	pin to the TIM2 timer
 */
 void gpio_init(){
-  // enable the peripheral clock of GPIO Port
-  GPIO_CLOCK |= GPIO_CLOCK_ENABLE;
 
-  // Connect the TIM2 timer to the GPIO Pin A0
-  GPIO_A_PIN &= CLEAR;                                                        // Clear the register
-  GPIO_A_PIN |= GPIO_ALTERNATE_FUNCTION_MODE;                                 // Put PA0 in alternate function mode
-  GPIO_PA0_ALTERNATE_FUNCTION |= GPIO_PA0_ENABLE_ALTERNATE_FUNCTION_TIM2;     // Tie PA0 to to TIM2
+	// Enable the GPIO clock
+	GPIO_CLOCK |= GPIO_CLOCK_ENABLE;
+
+	// Initialize PA0 and PA1 as output, tie them to TIM2
+	GPIO_A_PINS &= CLEAR;
+	GPIO_A_PINS |= GPIO_ALTERNATE_FUNCTION_MODE;
+	GPIO_PA0_ALTERNATE_FUNCTION |= GPIO_A_PA0_PA1_ALETERNATE_FUNCTION_ENABLE;
+
 }

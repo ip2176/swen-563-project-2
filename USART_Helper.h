@@ -43,3 +43,9 @@ void usart_write_data_string(char *message, ...);
   Output: Returns the output of the USART_Read function
 */
 char usart_read_simple(void);
+
+/*
+	This helper function wraps the real time write function and prints out
+	the terminal character the user should see
+*/
+void usart_terminal_character_simple(void);

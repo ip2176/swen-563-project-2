@@ -29,3 +29,58 @@ void exit_program(){
   usart_write_simple("Exiting the program");
   while(1);
 }
+
+/*
+  Helper function to print the banner for the program
+*/
+void print_banner(){
+  usart_write_simple("");
+	usart_write_simple("Enter commands to control motor execution");
+	usart_write_simple("   --The first letter controls the first servo");
+	usart_write_simple("   --The second letter controls the second servo");
+	usart_write_simple("   --Available letters:");
+	usart_write_simple("      --L or l: Turn the servo left if possible");
+	usart_write_simple("      --R or r: Turn the servo right if possible");
+	usart_write_simple("      --C or c: Continue execution of a recipe on the servo");
+	usart_write_simple("      --P or p: Pause execution of a recipe on the servo");
+	usart_write_simple("      --N or n: No op on the servo");
+	usart_write_simple("      --B or b: Begin execution of a recipe on the servo immediately");
+	usart_write_simple("Example: Enter 'Cc' to begin recipe execution on each servo");
+}
+
+/*
+	This function handles delaying by a number of seconds (for when we move the servos)
+	Takes from a stack overflow answer, seems to work great
+
+	Input: 
+		delay_time - The number of milliseconds to delay
+ **/
+void delay(int delay_time) {
+	long pause;
+	clock_t now,then;
+
+	pause = delay_time * (CLOCKS_PER_SEC / ONE_THOUSAND);
+	now = then = clock();
+	while((now-then) < pause){
+			now = clock();
+	}
+}
+
+/*
+  This funtion sets the TIM2 output correctly, then updates our data struct so we hold the correct data
+
+	Input:
+		motor_num 	    - An integer that specifies the number of the motor to move
+		motor     	    - The motor struct refernce to update
+    target_position - The position we want to move to
+*/
+void move_servo(int motor_num, servo_data *motor, uint16_t target_position){
+
+	if(motor_num == 0){
+		TIMER_2_MOTOR_1 = positions[target_position];
+	}
+	else {
+		TIMER_2_MOTOR_2 = positions[target_position]; 
+	}
+	motor->position = (position)target_position;
+}

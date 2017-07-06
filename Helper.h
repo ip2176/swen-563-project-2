@@ -3,7 +3,6 @@
 */
 
 #include "USART_Helper.h"
-#include "CONSTANTS.h"
 
 #include <string.h>
 
@@ -24,3 +23,23 @@ int check_for_valid_input(char *input, char *valid_characters);
   reset is pushed
 */
 void exit_program(void);
+
+/*
+  Helper function to print the banner for the program
+*/
+void print_banner(void);
+
+/*
+	Helper function to delay a certain number of milliseconds
+*/
+void delay(int delay_time);
+
+/*
+  This funtion sets the TIM2 output correctly, then updates our data struct so we hold the correct data
+
+	Input:
+		motor_num - An integer that specifies the number of the motor to move
+		motor     - The motor struct refernce to update
+    target_position - The position we want to move to
+*/
+void move_servo(int motor_num, servo_data *motor, uint16_t target_position);

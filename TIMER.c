@@ -4,70 +4,39 @@
 
 #include "TIMER.h"
 
+// Define our positions here so they propegate up to main.c
+int positions[END_OF_POSITION_ARRAY] = {
+	ZERO_DEGREES, 
+	THIRY_TWO_DEGREES,
+	SIXTY_FOUR_DEGREES,
+	NINETY_SIX_DEGREES,
+	ONE_HUNDRED_AND_TWENTY_EIGHT_DEGREES,
+	ONE_HUNDRED_AND_SIXTY_DEGREES
+};
+
 /*
-  Helper function to take care of initializing the timer registers.
-  Loads the prescaler value (forces the load), then enables capture
-  input
+	This function handles enabling the TIM2 channels as ouputs and setting the
+	prescaler to the right value (8000) in this case to get the right duty cycle
+	for movement
 */
 void timer_init(){
 
-  // Enable the TIM2 clock
-  TIMER_2 |= TIMER_2_ENABLE;
+	TIMER_2 |= TIMER_2_ENABLE;																						// Enable timer 2
+	TIMER_2_PRESCALER = TIMER_2_PRESCLAER_RATIO;		 						          // Set the prescaler value for timer 2
+	TIMER_2_CAPTURE_COMPARE &= TIMER_2_OUTPUT_MODE_CHAN1_CHAN2;  				  // Set CHAN1 and CHAN2 of TIM2 to output mode
+	TIMER_2_CAPTURE_COMPARE |= TIMER_2_CHAN1_CHAN2_ENABLE_OUTPUT_COMPARE; // Set TIM2 CHAN1 and CHAN2 to output compare and preload
+	TIMER_2_CAPTURE |= TIMER_2_AUTOLOAD_PRELOAD;  												// Autoload the preloaded values
+	TIMER_2_CAPTURE_INPUT |= TIMER_2_CHAN1_CHAN2_ENABLE_OUTPUT; 					// Enable channel 1 and 2 as output
+	TIMER_2_ARR_PRESCALER = TIMER_2_SECOND_PRESCALE_RATIO;							  // Scale the TIM2 value down again to match the GPIO frequency
+	
+	// Initialize the servo positions, so we know where they should point when
+	// we start the program
+	TIMER_2_MOTOR_1 = positions[zero_degrees];
+	TIMER_2_MOTOR_2 = positions[zero_degrees];
 
-  // Adjust the TIM2 device
-  TIMER_2_PRESCALER          = TIMER_2_PRESCLAER_RATIO;        // Load a prescale value to make the TIM2 clock rate match the GPIO clock rate
-  TIMER_2_PRESCALER_ENABLE   |= TIMER_2_PRESCALER_FORCE_LOAD;  // Force the board to load the prescaler value and match the clock rates
-  TIMER_2_CAPTURE_INPUT      &= CLEAR;                         // Clear the input register
-  TIMER_2_CAPTURE_COMPARE    |= TIMER_2_CAPTURE_SET_TO_INPUT;  // Make sure the capture channel is set to input mode
-  TIMER_2_CAPTURE_INPUT     |= TIMER_2_ENABLE_INPUT_CAPTURE;   // Enable capturing data on TIM2
-}
+	// Force the load of the prescaler values
+	TIMER_2_PRESCALER_ENABLE |= TIMER_2_PRESCALER_FORCE_LOAD;  
 
-/*
-  Helper function to enable the capture bit on the TIM2 device so
-  it starts capturing data
-*/
-void start_capture(){
-  TIMER_2_CAPTURE |= TIMER_2_ENABLE_INPUT_CAPTURE;
-}
-
-/*
-  Helper function to disable the capture bit on the TIM2 device so
-  it stops capturing data
-*/
-void stop_capture(){
-  TIMER_2_CAPTURE &= TIMER_2_DISABLE_INPUT_CAPTURE;
-}
-
-/*
-  Helper function that returns the value of the current
-  measurement in the TIM2 results register
-
-  Output: An unsigned 32bit integer that represents the value
-          in the register, this value is the millisecond
-          representation of the current measurement of the time
-*/
-uint32_t get_current_measurement(){
-  return (uint32_t)TIMER_2_CLOCK_TIMER_RESULTS;
-}
-
-/*
-  Helper function that returns the value of the current
-  measurement in the TIM2 clock count register
-
-  Output: An unsigned 32bit integer that represents the value
-          in the register, this value is the millisecond
-          representation of the current measurement of the count
-*/
-uint32_t get_current_time(){
-  return (uint32_t)TIMER_2_COUNT;
-}
-
-/*
-  Helper function to determine if a measurement can be made.  Uses the 
-  TIM2 status register to detect when a measurement is ready to read
-
-  Output: Returns an integer (the value in the register) will be 1 or 0
-*/
-int measurement_detected(){
-  return TIMER_2_RESULT_FOUND;
+	// Finally enable the timer register
+	TIMER_2_CAPTURE = TIMER_2_ENABLE_INPUT_CAPTURE;
 }
