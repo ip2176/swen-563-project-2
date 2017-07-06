@@ -15,7 +15,7 @@
 // Operational codes, these should only change the last three bits in a byte
 #define MOV (32)																				 // This represents: 0b001_00000
 #define WAIT (64)																				 // This represents: 0b010_00000
-#define LOOP_START (128)																 // This represents: 0b100_00000
+#define LOOP (128)																 			 // This represents: 0b100_00000
 #define END_LOOP (160)																	 // This represents: 0b101_00000
 #define RECIPE_END (0)																	 // This represents: 0b000_00000
 

@@ -17,7 +17,7 @@ int recipes[NUMBER_OF_RECIPES][MAX_RECIPE_SIZE] = {
 		MOV + 5,
 		MOV + 0,
 		MOV + 3,
-		LOOP_START + 0,
+		LOOP + 0,
 		MOV + 1,
 		MOV + 4,
 		END_LOOP,
