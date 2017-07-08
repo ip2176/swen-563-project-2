@@ -43,3 +43,11 @@ void delay(int delay_time);
     target_position - The position we want to move to
 */
 void move_servo(int motor_num, servo_data *motor, uint16_t target_position);
+
+/*
+  This funtion sets the default values for the motor struct passed to it
+
+	Input:
+		motors - The array of motor struct refernces to update
+*/
+void servo_data_init(servo_data *motors);

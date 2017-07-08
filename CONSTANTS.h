@@ -80,16 +80,22 @@
 #define GPIO_A_PA0_PA1_ALETERNATE_FUNCTION_ENABLE (0x11) // Enable alternate function on PA0 and PA1
 
 // Defines for the degrees the motor can move
-#define ZERO_DEGREES (4)
+#define ZERO_DEGREES (5)
 #define THIRY_TWO_DEGREES (7)
 #define SIXTY_FOUR_DEGREES (10)
 #define NINETY_SIX_DEGREES (13)
 #define ONE_HUNDRED_AND_TWENTY_EIGHT_DEGREES (16)
 #define ONE_HUNDRED_AND_SIXTY_DEGREES (19)
 
+// Default servo_data values
+#define RECIPE_START_INDEX_DEFAULT (0)
+#define INSIDE_RECIPE_DEFAULT (0)
+#define RECIPE_LOOP_COUNT_DEFAULT (0)
+#define RECIPE_LOOP_INDEX_DEFAULT (0)
+
 // Keep track of the state of the servo
 typedef enum {
-	paused,
+	inactive,
 	active
 } servo_status;
 

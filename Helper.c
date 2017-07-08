@@ -84,3 +84,22 @@ void move_servo(int motor_num, servo_data *motor, uint16_t target_position){
 	}
 	motor->position = (position)target_position;
 }
+
+/*
+  This funtion sets the default values for the motor struct passed to it
+
+	Input:
+		motors - The array of motor struct refernces to update
+*/
+void servo_data_init(servo_data *motors){
+
+	// Loop through each servo_data
+	for(int servo_data_index; servo_data_index < NUMBER_OF_SERVOS; servo_data_index++){
+		motors[servo_data_index].position = zero_degrees;
+		motors[servo_data_index].recipe_index = RECIPE_START_INDEX_DEFAULT;
+		motors[servo_data_index].inside_recipe_loop = INSIDE_RECIPE_DEFAULT;
+		motors[servo_data_index].recipe_loop_count = RECIPE_LOOP_COUNT_DEFAULT;
+		motors[servo_data_index].recipe_loop_index = RECIPE_LOOP_INDEX_DEFAULT;
+		motors[servo_data_index].status = inactive;
+	}
+}

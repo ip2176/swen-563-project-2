@@ -6,7 +6,7 @@
 #include "TIMER.h"
 
 // Constant declarations
-servo_data motor[NUMBER_OF_SERVOS];														// Contains information on the various motor metrics
+servo_data motors[NUMBER_OF_SERVOS];														// Contains information on the various motor metrics
 
 // Define a multidemensional array to contain every recipe
 int recipes[NUMBER_OF_RECIPES][MAX_RECIPE_SIZE] = {
@@ -80,23 +80,26 @@ int process_user_input(char commands[COMMAND_BUFFER_SIZE]){
 			case 'B':
 			case 'b':
 
-				// Set the status to running and make sure we start the recipe from the
-				// beginning
+				// Make sure we keep track of the motor status here
+				// Also reset the recipe index, since 'B' should always start at the beginning
+				motors[index].recipe_index = RECIPE_START_INDEX_DEFAULT;
+				motors[index].status = active;
 				recipe_command_entered = 1;
 				break;
 			case 'C':
 			case 'c':
 
-				// Insert motor running status here
+				// Make sure we keep track of the motor status here
+				motors[index].status = active;
 				recipe_command_entered = 1;
 				break;
 			case 'L':
 			case 'l':
-				target_position = motor[index].position - 1;
-				if(motor[index].position != zero_degrees) {
+				target_position = motors[index].position - 1;
+				if(motors[index].position != zero_degrees) {
 					Green_LED_Off();
 					Red_LED_On();
-					move_servo(index, &motor[index], target_position); 
+					move_servo(index, &motors[index], target_position); 
 					Red_LED_Off();
 					Green_LED_On();
 				}
@@ -113,16 +116,17 @@ int process_user_input(char commands[COMMAND_BUFFER_SIZE]){
 			case 'P':
 			case 'p':
 
-				// Insert motor pause status here
+				// Make sure we keep track of the motor status here
+				motors[index].status = inactive;
 				break;
 
 			case 'R':
 			case 'r':
-				target_position = motor[index].position + 1;
-				if(motor[index].position != one_hundred_and_sixty_degrees) {
+				target_position = motors[index].position + 1;
+				if(motors[index].position != one_hundred_and_sixty_degrees) {
 					Green_LED_Off();
 					Red_LED_On();
-					move_servo(index, &motor[index], target_position); 
+					move_servo(index, &motors[index], target_position); 
 					Red_LED_Off();
 					Green_LED_On();
 				}
@@ -255,6 +259,7 @@ int main(void){
 	UART2_Init();
 	gpio_init();
 	timer_init();
+	servo_data_init(motors);
 
 	// Print our banner, let the user know how to proceed
 	print_banner();
