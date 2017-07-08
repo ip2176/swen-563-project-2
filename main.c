@@ -234,6 +234,21 @@ void process_recipe(){
 	usart_write_simple("Processing the recipe ...");
 	usart_write_simple("Recipe complete!");
 
+	for(int i = 0; i < NUMBER_OF_RECIPES; i++){
+		for(int j = 0; j < MAX_RECIPE_SIZE; j++){
+			current_instruction instruction = get_instruction(recipes[i][j]);
+			if(instruction.opcode == RECIPE_END){
+					usart_write_data_string("Recipe end opcode "BYTE_TO_BINARY_PATTERN, BYTE_TO_BINARY(instruction.opcode));
+					usart_write_data_string("Recipe end parameter "BYTE_TO_BINARY_PATTERN, BYTE_TO_BINARY(instruction.parameter));
+					break;
+			}
+			else {
+				usart_write_data_string("Opcode "BYTE_TO_BINARY_PATTERN, BYTE_TO_BINARY(instruction.opcode));
+				usart_write_data_string("Parameter "BYTE_TO_BINARY_PATTERN, BYTE_TO_BINARY(instruction.parameter));
+			}
+		}
+	}
+
 	// Actually move the motor here, logic not yet implemented.  Maybe process the recipe as
 	// a case statement defined with the OCODES?
 }

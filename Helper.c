@@ -103,3 +103,44 @@ void servo_data_init(servo_data *motors){
 		motors[servo_data_index].status = inactive;
 	}
 }
+
+/*
+	This function returns an OPCODE when given a byte register
+
+	Input:
+		byte_register - A byte register (a uint8_t)
+	Output:
+		The function returns the opcode as a uint8_t
+*/
+uint8_t get_opcode(uint8_t byte_register){
+	return byte_register & OPERATIONAL_CODE_MASK;
+}
+
+/*
+	This function returns an PARAMETER when given a byte register
+
+	Input:
+		byte_register - A byte register (a uint8_t)
+	Output:
+		The function returns the parameter as a uint8_t
+*/
+uint8_t get_parameter(uint8_t byte_register){
+	return byte_register & PARAMETER_MASK;
+}
+
+/*
+	This function returns an instruction struct when given a byte register
+	The function packs the struct with the current opcode and parameter for
+	the opcode
+
+	Input:
+		byte_register - A byte register (a uint8_t)
+	Output:
+		The function returns a struct containing the opcode and the parameter
+*/
+current_instruction get_instruction(uint8_t byte_register){
+	current_instruction instruction_struct;
+	instruction_struct.opcode = get_opcode(byte_register);
+	instruction_struct.parameter = get_parameter(byte_register);
+	return instruction_struct;
+}

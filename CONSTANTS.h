@@ -93,6 +93,19 @@
 #define RECIPE_LOOP_COUNT_DEFAULT (0)
 #define RECIPE_LOOP_INDEX_DEFAULT (0)
 
+// This was taken from here: https://stackoverflow.com/questions/111928/is-there-a-printf-converter-to-print-in-binary-format
+// Used for printing in binary format
+#define BYTE_TO_BINARY_PATTERN "%c%c%c%c%c%c%c%c"
+#define BYTE_TO_BINARY(byte)  \
+	(byte & 0x80 ? '1' : '0'), \
+	(byte & 0x40 ? '1' : '0'), \
+	(byte & 0x20 ? '1' : '0'), \
+	(byte & 0x10 ? '1' : '0'), \
+	(byte & 0x08 ? '1' : '0'), \
+	(byte & 0x04 ? '1' : '0'), \
+	(byte & 0x02 ? '1' : '0'), \
+	(byte & 0x01 ? '1' : '0') 
+
 // Keep track of the state of the servo
 typedef enum {
 	inactive,
@@ -119,6 +132,13 @@ typedef struct{
 	int inside_recipe_loop;		// This tells us if we are inside a loop in a recipe
 	int recipe_loop_index;		// This tells us where we are in each loop inside the recipe
 } servo_data;
+
+// Use a struct to contain the current opcode and parameter while processing
+// recipes
+typedef struct{
+	uint8_t opcode;  					// This is the opcode for the current recipe action
+	uint8_t parameter;				// This is the parameter for the opcode action
+} current_instruction;
 
 // Define the array that we will carry our pulse width data in
 extern int positions[END_OF_POSITION_ARRAY];																										

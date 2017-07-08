@@ -51,3 +51,35 @@ void move_servo(int motor_num, servo_data *motor, uint16_t target_position);
 		motors - The array of motor struct refernces to update
 */
 void servo_data_init(servo_data *motors);
+
+/*
+	This function returns an OPCODE when given a byte register
+
+	Input:
+		byte_register - A byte register (a uint8_t)
+	Output:
+		The function returns the opcode as a uint8_t
+*/
+uint8_t get_opcode(uint8_t byte_register);
+
+/*
+	This function returns an PARAMETER when given a byte register
+
+	Input:
+		byte_register - A byte register (a uint8_t)
+	Output:
+		The function returns the parameter as a uint8_t
+*/
+uint8_t get_parameter(uint8_t byte_register);
+
+/*
+	This function returns an instruction struct when given a byte register
+	The function packs the struct with the current opcode and parameter for
+	the opcode
+
+	Input:
+		byte_register - A byte register (a uint8_t)
+	Output:
+		The function returns a struct containing the opcode and the parameter
+*/
+current_instruction get_instruction(uint8_t byte_register);
