@@ -32,7 +32,7 @@ void print_banner(void);
 /*
 	Helper function to delay a certain number of milliseconds
 */
-void delay(int delay_time);
+void delay(uint32_t delay_time);
 
 /*
   This funtion sets the TIM2 output correctly, then updates our data struct so we hold the correct data
@@ -43,6 +43,15 @@ void delay(int delay_time);
     target_position - The position we want to move to
 */
 void move_servo(int motor_num, servo_data *motor, uint16_t target_position);
+
+/*
+	This wrapper function resets the target servo to zero degrees
+
+	Input:
+		motor_num 	    - An integer that specifies the number of the motor to move
+		motor     	    - The motor struct refernce to update
+*/
+void reset_servo(int motor_num, servo_data *motor);
 
 /*
   This funtion sets the default values for the motor struct passed to it
@@ -83,3 +92,24 @@ uint8_t get_parameter(uint8_t byte_register);
 		The function returns a struct containing the opcode and the parameter
 */
 current_instruction get_instruction(uint8_t byte_register);
+
+/*
+	Helper function to abstract away the details of determining if a movement
+	would place the servo out of bounds
+	
+	Input:
+		instruction - An instruction struct to check if the current instruction from
+
+	Output:
+		This function returns true if the instruction is in bounds, false otherwise
+*/
+int instruction_in_bounds(current_instruction instruction);
+
+/*
+	This function handles the logic for incrementing the recipe number for the
+	given motor data
+
+	Input:
+		motor - The motor struct refernce to update
+*/
+void increment_recipe(servo_data *motor);

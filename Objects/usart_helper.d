@@ -13,5 +13,4 @@
 .\objects\usart_helper.o: C:\Keil_v5\ARM\ARMCC\Bin\..\include\string.h
 .\objects\usart_helper.o: C:\Keil_v5\ARM\ARMCC\Bin\..\include\stdio.h
 .\objects\usart_helper.o: C:\Keil_v5\ARM\ARMCC\Bin\..\include\stdlib.h
-.\objects\usart_helper.o: C:\Keil_v5\ARM\ARMCC\Bin\..\include\time.h
 .\objects\usart_helper.o: C:\Keil_v5\ARM\ARMCC\Bin\..\include\stdarg.h

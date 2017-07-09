@@ -49,25 +49,24 @@ void print_banner(){
 }
 
 /*
-	This function handles delaying by a number of seconds (for when we move the servos)
-	Takes from a stack overflow answer, seems to work great
+	This function handles delaying by a number of milliseconds
 
 	Input: 
 		delay_time - The number of milliseconds to delay
  **/
-void delay(int delay_time) {
-	long pause;
-	clock_t now,then;
+void delay(uint32_t delay_time) {
 
-	pause = delay_time * (CLOCKS_PER_SEC / ONE_THOUSAND);
-	now = then = clock();
-	while((now-then) < pause){
-			now = clock();
-	}
+	// Convert to microseconds
+	delay_time = (MICROSECOND_CONVERSION * delay_time);
+
+	// Do nothing for a while!  Hopefully this doesn't get compiled out ...
+	for(uint32_t index = 0; index < delay_time; index++);
 }
 
 /*
-  This funtion sets the TIM2 output correctly, then updates our data struct so we hold the correct data
+  This funtion sets the TIM2 output correctly, then updates our data 
+	struct so we hold the correct data, then finally delays before allowing
+	the next movement
 
 	Input:
 		motor_num 	    - An integer that specifies the number of the motor to move
@@ -75,14 +74,34 @@ void delay(int delay_time) {
     target_position - The position we want to move to
 */
 void move_servo(int motor_num, servo_data *motor, uint16_t target_position){
+	position last_position;
+	position new_position = (position)target_position;
+	uint16_t number_of_steps = 0;
 
+	// Move the servo first
 	if(motor_num == 0){
-		TIMER_2_MOTOR_1 = positions[target_position];
+		TIMER_2_MOTOR_1 = positions[new_position];
 	}
 	else {
-		TIMER_2_MOTOR_2 = positions[target_position]; 
+		TIMER_2_MOTOR_2 = positions[new_position]; 
 	}
-	motor->position = (position)target_position;
+
+	// Update the position data and delay appropriately
+	last_position = motor->position;
+	motor->position = new_position;
+	number_of_steps = abs(last_position - new_position);
+	delay(ONE_STEP_SERVO_DELAY * number_of_steps);
+}
+
+/*
+	This wrapper function resets the target servo to zero degrees
+
+	Input:
+		motor_num 	    - An integer that specifies the number of the motor to move
+		motor     	    - The motor struct refernce to update
+*/
+void reset_servo(int motor_num, servo_data *motor){
+	move_servo(motor_num, motor, zero_degrees);
 }
 
 /*
@@ -96,7 +115,8 @@ void servo_data_init(servo_data *motors){
 	// Loop through each servo_data
 	for(int servo_data_index; servo_data_index < NUMBER_OF_SERVOS; servo_data_index++){
 		motors[servo_data_index].position = zero_degrees;
-		motors[servo_data_index].recipe_index = RECIPE_START_INDEX_DEFAULT;
+		motors[servo_data_index].recipe_index = RECIPE_INDEX_DEFAULT;
+		motors[servo_data_index].recipe_instruction_index = RECIPE_INSTRUCTION_INDEX_DEFAULT;
 		motors[servo_data_index].inside_recipe_loop = INSIDE_RECIPE_DEFAULT;
 		motors[servo_data_index].recipe_loop_count = RECIPE_LOOP_COUNT_DEFAULT;
 		motors[servo_data_index].recipe_loop_index = RECIPE_LOOP_INDEX_DEFAULT;
@@ -143,4 +163,37 @@ current_instruction get_instruction(uint8_t byte_register){
 	instruction_struct.opcode = get_opcode(byte_register);
 	instruction_struct.parameter = get_parameter(byte_register);
 	return instruction_struct;
+}
+
+/*
+	Helper function to abstract away the details of determining if a movement
+	would place the servo out of bounds
+	
+	Input:
+		instruction - An instruction struct to check if the current instruction from
+
+	Output:
+		This function returns true if the instruction is in bounds, false otherwise
+*/
+int instruction_in_bounds(current_instruction instruction){
+
+	// Since the instruction is always going to be an unsigned integer, the comparison to
+	// zero is pointless.  It will always be greater than or eaual to zero
+	return (instruction.parameter <= one_hundred_and_sixty_degrees);
+}
+
+/*
+	This function handles the logic for incrementing the recipe number for the
+	given motor data
+
+	Input:
+		motor - The motor struct refernce to update
+*/
+void increment_recipe(servo_data *motor){
+	if(motor->recipe_index >= NUMBER_OF_RECIPES - 1){
+		motor->recipe_index = RECIPE_INDEX_DEFAULT;
+	}
+	else{
+		motor->recipe_index++;
+	}
 }

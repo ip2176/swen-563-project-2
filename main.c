@@ -82,7 +82,8 @@ int process_user_input(char commands[COMMAND_BUFFER_SIZE]){
 
 				// Make sure we keep track of the motor status here
 				// Also reset the recipe index, since 'B' should always start at the beginning
-				motors[index].recipe_index = RECIPE_START_INDEX_DEFAULT;
+				motors[index].recipe_index = RECIPE_INDEX_DEFAULT;
+				motors[index].recipe_instruction_index = RECIPE_INSTRUCTION_INDEX_DEFAULT;
 				motors[index].status = active;
 				recipe_command_entered = 1;
 				break;
@@ -231,26 +232,93 @@ int get_user_input(){
 */
 void process_recipe(){
 	usart_write_simple("");
-	usart_write_simple("Processing the recipe ...");
-	usart_write_simple("Recipe complete!");
+	usart_write_simple("Processing recipes ...");
+	int recipe_ended = 0;
+	
+	// For each servo perform each action
+	for(int servo_index = 0; servo_index < NUMBER_OF_SERVOS; servo_index++){
 
-	for(int i = 0; i < NUMBER_OF_RECIPES; i++){
-		for(int j = 0; j < MAX_RECIPE_SIZE; j++){
-			current_instruction instruction = get_instruction(recipes[i][j]);
-			if(instruction.opcode == RECIPE_END){
-					usart_write_data_string("Recipe end opcode "BYTE_TO_BINARY_PATTERN, BYTE_TO_BINARY(instruction.opcode));
-					usart_write_data_string("Recipe end parameter "BYTE_TO_BINARY_PATTERN, BYTE_TO_BINARY(instruction.parameter));
+		// We need to iterate through each recipe, start off where we last left off
+		for(int recipe_index = motors[servo_index].recipe_index; recipe_index < NUMBER_OF_RECIPES; recipe_index++){
+
+			// Get the current instruction from the recipe, start where we last left off
+			for(int instruction_index = motors[servo_index].recipe_instruction_index; instruction_index < MAX_RECIPE_SIZE; instruction_index++){
+				
+				// Break the current loop, go to the next loop
+				if(recipe_ended){
+					recipe_ended = 0;
 					break;
-			}
-			else {
-				usart_write_data_string("Opcode "BYTE_TO_BINARY_PATTERN, BYTE_TO_BINARY(instruction.opcode));
-				usart_write_data_string("Parameter "BYTE_TO_BINARY_PATTERN, BYTE_TO_BINARY(instruction.parameter));
+				}
+
+				// Get the current instruction object from the recipe
+				current_instruction instruction = get_instruction(recipes[recipe_index][instruction_index]);
+				
+				// The motor has been iussued a recipe command and is active
+				if(motors[servo_index].status == active){
+
+					// Perform all of the opcodes
+					switch(instruction.opcode){
+						
+						// Handle servo movement
+						case MOV:
+
+							// The instruction is in bounds
+							if(instruction_in_bounds(instruction)){
+								move_servo(servo_index, &motors[servo_index], instruction.parameter);
+
+								// We performed an action, increment the counter in the motor data in case we a pause
+								motors[servo_index].recipe_instruction_index++;
+							}
+							
+							// If the instruction is out of bounds fail and make the user restart
+							else{
+								usart_write_simple("");
+								usart_write_data_string("ERROR: Current instruction parameter out of bounds"BYTE_TO_BINARY_PATTERN, BYTE_TO_BINARY(instruction.parameter));
+								exit_program();
+							}
+							break;
+
+						case WAIT:
+
+							// Delay the appropriate amount of time
+							delay(ONE_STEP_SERVO_DELAY * instruction.parameter);
+
+							// Incement the instruction counter
+							motors[servo_index].recipe_instruction_index++;
+							break;
+
+						case LOOP:
+							break;
+						case END_LOOP:
+							break;
+						case RECIPE_END:
+							recipe_ended = 1;
+							usart_write_data_string("Recipe %d complete for servo %d, resetting servo %d to starting position ...", recipe_index, servo_index, servo_index);
+							
+							// Reset the servo position back to 0 degrees so the next recipe starts in a known position
+							reset_servo(servo_index, &motors[servo_index]);
+
+							// Set the servo back inactive
+							motors[servo_index].status = inactive;
+						
+							// Reset the instruction index
+							motors[servo_index].recipe_instruction_index = RECIPE_INSTRUCTION_INDEX_DEFAULT;
+
+							break;
+
+						// Invalid command found
+						default:
+								usart_write_data_string("Invalid recipe command encountered "BYTE_TO_BINARY_PATTERN, BYTE_TO_BINARY(instruction.opcode));
+								break;
+					}
+				}
 			}
 		}
-	}
 
-	// Actually move the motor here, logic not yet implemented.  Maybe process the recipe as
-	// a case statement defined with the OCODES?
+		// Reset back to the first recipe if we have already completed all of the recipes
+		increment_recipe(&motors[servo_index]);
+	}
+	usart_write_simple("Recipes complete!");
 }
 
 /*
@@ -269,6 +337,7 @@ int main(void){
 	int recipe_command_entered;
 
 	// Initialize!
+	
 	System_Clock_Init();
 	LED_Init();
 	UART2_Init();

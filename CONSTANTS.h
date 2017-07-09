@@ -10,7 +10,6 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <time.h>
 
 // Operational codes, these should only change the last three bits in a byte
 #define MOV (32)																				 // This represents: 0b001_00000
@@ -26,7 +25,8 @@
 #define PARAMETER_MASK (31) 														 // This represents the following: 0b00011111
 
 // General defines
-#define ONE_THOUSAND (1000)															 // Used for determining the delay time in Timer.c
+#define MICROSECOND_CONVERSION (10000)									 // Used for determining the delay time in Helper.c
+#define WAIT_TIME_CONVERSION (100)											 // Used for the WAIT opcode (represents 1/10 of a second)
 #define MAX_RECIPE_SIZE (100)														 // Used to determine the maximum recipe size
 #define NUMBER_OF_RECIPES (4)													   // The number of test recipes
 #define NUMBER_OF_SERVOS (2)														 // The number of motors we can move
@@ -88,7 +88,8 @@
 #define ONE_HUNDRED_AND_SIXTY_DEGREES (19)
 
 // Default servo_data values
-#define RECIPE_START_INDEX_DEFAULT (0)
+#define RECIPE_INDEX_DEFAULT (0)
+#define RECIPE_INSTRUCTION_INDEX_DEFAULT (0)
 #define INSIDE_RECIPE_DEFAULT (0)
 #define RECIPE_LOOP_COUNT_DEFAULT (0)
 #define RECIPE_LOOP_INDEX_DEFAULT (0)
@@ -105,6 +106,9 @@
 	(byte & 0x04 ? '1' : '0'), \
 	(byte & 0x02 ? '1' : '0'), \
 	(byte & 0x01 ? '1' : '0') 
+
+// Use this define for moving the servos
+#define ONE_STEP_SERVO_DELAY (200) 											 // The general time to move a servo one step (in milliseconds)
 
 // Keep track of the state of the servo
 typedef enum {
@@ -125,12 +129,13 @@ typedef enum {
 
 // Keep track of various items that describe the state of the servo
 typedef struct{
-	servo_status status;			// This tells us the current state of the servo (paused, or running)
-	position position;				// This tells us the current position each servo is in	
-	int recipe_index;					// This tells us where we are in a recipe
-	int recipe_loop_count;		// This tells us how many times we have looped in a recipe
-	int inside_recipe_loop;		// This tells us if we are inside a loop in a recipe
-	int recipe_loop_index;		// This tells us where we are in each loop inside the recipe
+	servo_status status;					// This tells us the current state of the servo (paused, or running)
+	position position;						// This tells us the current position each servo is in	
+	int recipe_index;							// This tells us which recipe we are on
+	int recipe_instruction_index; // This tells us which instruction inside of the current recipe we are on
+	int recipe_loop_count;				// This tells us how many times we have looped in a recipe
+	int inside_recipe_loop;				// This tells us if we are inside a loop in a recipe
+	int recipe_loop_index;				// This tells us where we are in each loop inside the recipe
 } servo_data;
 
 // Use a struct to contain the current opcode and parameter while processing
