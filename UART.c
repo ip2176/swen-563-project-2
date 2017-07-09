@@ -106,6 +106,18 @@ uint8_t USART_Read (USART_TypeDef * USARTx) {
 	// Reading USART_DR automatically clears the RXNE flag 
 }
 
+uint8_t USART_Read_No_Block (USART_TypeDef * USARTx) {
+	// SR_RXNE (Read data register not empty) bit is set by hardware
+	if ((USARTx->ISR & USART_ISR_RXNE)) {
+		// Reading USART_DR automatically clears the RXNE flag 
+		return ((uint8_t)(USARTx->RDR & 0xFF));
+	}
+	else {
+		// If nothing to do, return null instead of waiting
+		return '\0';
+	}
+}
+
 void USART_Write(USART_TypeDef * USARTx, uint8_t *buffer, uint32_t nBytes) {
 	int i;
 	// TXE is cleared by a write to the USART_DR register.

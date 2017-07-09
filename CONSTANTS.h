@@ -25,6 +25,9 @@
 #define PARAMETER_MASK (31) 														 // This represents the following: 0b00011111
 
 // General defines
+#define INSIDE_RECIPE_LOOP (1)													 // Used to determine if we are inside a recipe loop
+#define LOOP_END_COUNT (0)															 // Used to determine the of the end of a recipe loop
+#define RECIPE_LOOP_MODIFIER (1)												 // We subtract one from the loop count to get the length not the size
 #define MICROSECOND_CONVERSION (10000)									 // Used for determining the delay time in Helper.c
 #define WAIT_TIME_CONVERSION (100)											 // Used for the WAIT opcode (represents 1/10 of a second)
 #define MAX_RECIPE_SIZE (100)														 // Used to determine the maximum recipe size
@@ -35,11 +38,12 @@
 #define SUCCESS (1)                                      // Used for some int returning functions
 #define FAILURE (0)                                      // Used for some int returning functions
 #define VALID_X  ("Xx")                                  // Used to check if the user enered X's into the prompt
-#define ASCII_NEWLINE  (13)                              // Ugh, have to check for newlines
+#define VALID_P  ("Pp")                                  // Used to check if the user enered p's into the prompt
+#define ASCII_NEWLINE  (13)                              // Used to check for newlines
 #define ASCII_BACKSPACE (127)	   												 // Used to check for backspaces
-#define ASCII_TERMINAL_CHARACTER (62)												 	 // This character is used for the input terminal
+#define ASCII_TERMINAL_CHARACTER (62)										 // This character is used for the input terminal
 #define PRINT_NEWLINE (1)                                // Tells the real time printer to print a newline
-#define NO_NEWLINE (0)                                   // Tellks the real time printer not to print a newline
+#define NO_NEWLINE (0)                                   // Tells the real time printer not to print a newline
 #define REAL_TIME_BUFFER_SIZE (1)                        // Used to output the users input in real time
 #define REAL_TIME_BUFFER_START (0)                       // Used for printing out real time data as its entered in
 #define CARRIAGE_RETURN_NEWLINE ("\r\n")                 // Used in strings in the program
@@ -90,7 +94,7 @@
 // Default servo_data values
 #define RECIPE_INDEX_DEFAULT (0)
 #define RECIPE_INSTRUCTION_INDEX_DEFAULT (0)
-#define INSIDE_RECIPE_DEFAULT (0)
+#define INSIDE_RECIPE_LOOP_DEFAULT (0)
 #define RECIPE_LOOP_COUNT_DEFAULT (0)
 #define RECIPE_LOOP_INDEX_DEFAULT (0)
 

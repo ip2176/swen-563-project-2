@@ -73,6 +73,16 @@ char usart_read_simple(){
 }
 
 /*
+  Helper function to handle the usart read function syntax
+	Returns instead of blocking if no character is available
+
+  Output: Returns the output of the USART_Read function
+*/
+char usart_read_no_block(void){
+	return USART_Read_No_Block(USART2);
+}
+
+/*
 	This helper function wraps the real time write function and prints out
 	the terminal character the user should see
 */

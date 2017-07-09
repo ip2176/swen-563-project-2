@@ -117,7 +117,7 @@ void servo_data_init(servo_data *motors){
 		motors[servo_data_index].position = zero_degrees;
 		motors[servo_data_index].recipe_index = RECIPE_INDEX_DEFAULT;
 		motors[servo_data_index].recipe_instruction_index = RECIPE_INSTRUCTION_INDEX_DEFAULT;
-		motors[servo_data_index].inside_recipe_loop = INSIDE_RECIPE_DEFAULT;
+		motors[servo_data_index].inside_recipe_loop = INSIDE_RECIPE_LOOP_DEFAULT;
 		motors[servo_data_index].recipe_loop_count = RECIPE_LOOP_COUNT_DEFAULT;
 		motors[servo_data_index].recipe_loop_index = RECIPE_LOOP_INDEX_DEFAULT;
 		motors[servo_data_index].status = inactive;

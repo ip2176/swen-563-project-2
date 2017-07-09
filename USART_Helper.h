@@ -45,6 +45,14 @@ void usart_write_data_string(char *message, ...);
 char usart_read_simple(void);
 
 /*
+  Helper function to handle the usart read function syntax
+	Returns instead of blocking if no character is available
+
+  Output: Returns the output of the USART_Read function
+*/
+char usart_read_no_block(void);
+
+/*
 	This helper function wraps the real time write function and prints out
 	the terminal character the user should see
 */
