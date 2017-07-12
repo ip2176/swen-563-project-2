@@ -22,12 +22,59 @@ int check_for_valid_input(char *input, char *valid_characters){
 }
 
 /*
-  Helper function to keep the board form doing anythiung else until
-  reset is pushed
+	Helper function to check if the user wishes to continue
+
+	Output:
+		An integer indicating that the user wishes to continue
 */
-void exit_program(){
-  usart_write_simple("Exiting the program");
-  while(1);
+int check_for_continuation(){
+	char input = NULL;
+	int keep_going = 0;
+	usart_write_simple("Do you wish to skip to the next instruction? (Yy or Nn):");
+	usart_terminal_character_simple();
+	input = usart_read_simple();
+
+	// Write out what the user wrote
+	usart_real_time_write(input, PRINT_NEWLINE);
+
+	// Get valid input
+	while(!check_for_valid_input(&input, VALID_YES_NO)){
+		usart_write_simple("");
+		usart_write_data_string("Invalid input (%c) please enter Yy or Nn:", input);
+		usart_terminal_character_simple();
+		input = usart_read_simple();
+
+		// Write out what the user wrote
+		usart_real_time_write(input, PRINT_NEWLINE);
+	}
+
+	// Check if the user wants to continue
+	if(check_for_valid_input(&input, VALID_Y)){
+		keep_going = 1;
+	}
+	return keep_going;
+}
+
+/*
+  Helper function to keep the board form doing anythiung else until
+  reset is pushed, unless the user wishes to continue
+
+	Output:
+		An integer indicating that the user wishes to continue
+*/
+int exit_program(){
+	int keep_going = 0;
+	keep_going = check_for_continuation();
+
+	// Check if the user wants to keep going and if not, 
+	// 'exit' the program
+	if(!keep_going){
+		usart_write_simple("Exiting the program");
+		while(1);
+	}
+
+	// Return if we don't 'exit' first
+	return keep_going;
 }
 
 /*
@@ -195,5 +242,49 @@ void increment_recipe(servo_data *motor){
 	}
 	else{
 		motor->recipe_index++;
+	}
+}
+
+/*
+	Fixup the servo data on the given servo
+
+	Input:
+		index  - The motor servo data index
+		motors - The array of motor struct refernces to update
+*/
+void fixup_servo_data(int index, servo_data *motor){
+	usart_write_data_string("Recipe %d complete for servo %d, resetting servo %d to starting position ...", motor->recipe_index, index, index);
+						
+	// Reset the servo position back to 0 degrees so the next recipe starts in a known position
+	reset_servo(index, motor);
+
+	// Reset back to the first recipe if we have already completed all of the recipes
+	increment_recipe(motor);
+
+	// Set the servo back inactive
+	motor->status = inactive;
+
+	// Reset the instruction index
+	motor->recipe_instruction_index = RECIPE_INSTRUCTION_INDEX_DEFAULT;
+	
+	// Make sure we indicate we are not in a loop if that wasn't set
+	motor->recipe_loop_count = RECIPE_LOOP_COUNT_DEFAULT;
+	motor->recipe_loop_index = RECIPE_LOOP_INDEX_DEFAULT;
+	motor->inside_recipe_loop = INSIDE_RECIPE_LOOP_DEFAULT;
+}
+
+/*
+	Fixup the servo data if need be on all servos
+
+	Input:
+		motors - The array of motor struct refernces to update
+*/
+void fixup_servo_data_multiple(servo_data *motors){
+
+	// Loop through each servo_data
+	for(int servo_data_index; servo_data_index < NUMBER_OF_SERVOS; servo_data_index++){
+		if(motors[servo_data_index].recipe_instruction_index != RECIPE_INSTRUCTION_INDEX_DEFAULT){
+			fixup_servo_data(servo_data_index, &motors[servo_data_index]);
+		}
 	}
 }

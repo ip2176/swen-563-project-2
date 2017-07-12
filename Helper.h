@@ -19,10 +19,21 @@
 int check_for_valid_input(char *input, char *valid_characters);
 
 /*
-  Helper function to keep the board form doing anythiung else until
-  reset is pushed
+	Helper function to check if the user wishes to continue
+
+	Output:
+		An integer indicating that the user wishes to continue
 */
-void exit_program(void);
+int check_for_continuation(void);
+
+/*
+  Helper function to keep the board form doing anythiung else until
+  reset is pushed, unless the user wishes to continue
+
+	Output:
+		An integer indicating that the user wishes to continue
+*/
+int exit_program(void);
 
 /*
   Helper function to print the banner for the program
@@ -113,3 +124,20 @@ int instruction_in_bounds(current_instruction instruction);
 		motor - The motor struct refernce to update
 */
 void increment_recipe(servo_data *motor);
+
+/*
+	Fixup the servo data on the given servo
+
+	Input:
+		index  - The motor servo data index
+		motors - The array of motor struct refernces to update
+*/
+void fixup_servo_data(int index, servo_data *motor);
+
+/*
+	Fixup the servo data if need be on all servos
+
+	Input:
+		motors - The array of motor struct refernces to update
+*/
+void fixup_servo_data_multiple(servo_data *motors);

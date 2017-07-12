@@ -17,6 +17,7 @@
 #define LOOP (128)																 			 // This represents: 0b100_00000
 #define END_LOOP (160)																	 // This represents: 0b101_00000
 #define RECIPE_END (0)																	 // This represents: 0b000_00000
+#define ERRONEOUS (192)																	 // This represents: 0b110_00000
 
 // We need to use one byte to define both our operational code and
 // the parameter passed to it, so use the last three bytes to define
@@ -31,14 +32,16 @@
 #define MICROSECOND_CONVERSION (10000)									 // Used for determining the delay time in Helper.c
 #define WAIT_TIME_CONVERSION (100)											 // Used for the WAIT opcode (represents 1/10 of a second)
 #define MAX_RECIPE_SIZE (100)														 // Used to determine the maximum recipe size
-#define NUMBER_OF_RECIPES (4)													   // The number of test recipes
+#define NUMBER_OF_RECIPES (6)													   // The number of test recipes
 #define NUMBER_OF_SERVOS (2)														 // The number of motors we can move
-#define OUTPUT_BUFFER_SIZE (1000)                        // Arbitrary bad code, I know
+#define OUTPUT_BUFFER_SIZE (2000)                        // Arbitrary bad code, I know
 #define COMMAND_BUFFER_SIZE (2)													 // Used for setting the current command for each motor 
 #define SUCCESS (1)                                      // Used for some int returning functions
 #define FAILURE (0)                                      // Used for some int returning functions
 #define VALID_X  ("Xx")                                  // Used to check if the user enered X's into the prompt
 #define VALID_P  ("Pp")                                  // Used to check if the user enered p's into the prompt
+#define VALID_Y  ("Yy")                           			 // Used to check if the user wants to continue recipe execution after error
+#define VALID_YES_NO  ("YyNn")                           // Used to check if the user wants to continue recipe execution after error
 #define ASCII_NEWLINE  (13)                              // Used to check for newlines
 #define ASCII_BACKSPACE (127)	   												 // Used to check for backspaces
 #define ASCII_TERMINAL_CHARACTER (62)										 // This character is used for the input terminal
