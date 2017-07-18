@@ -15,3 +15,4 @@
 .\objects\helper.o: C:\Keil_v5\ARM\ARMCC\Bin\..\include\stdio.h
 .\objects\helper.o: C:\Keil_v5\ARM\ARMCC\Bin\..\include\stdlib.h
 .\objects\helper.o: C:\Keil_v5\ARM\ARMCC\Bin\..\include\stdarg.h
+.\objects\helper.o: Timer.h

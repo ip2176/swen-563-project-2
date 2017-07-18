@@ -97,11 +97,12 @@ int process_user_input(char commands[COMMAND_BUFFER_SIZE]){
 	int recipe_command_entered = 0;
 	int already_printed_warning = 0;
 	uint16_t target_position;
+	uint16_t current_delay_time = 0;
 	
 	// Figure out the command for each motor, the first command is for the
 	// first motor, the second for the second motor
 	for(int index = 0; index < NUMBER_OF_SERVOS; index++){
-		
+
 		switch(commands[index]){
 			case 'B':
 			case 'b':
@@ -124,11 +125,8 @@ int process_user_input(char commands[COMMAND_BUFFER_SIZE]){
 			case 'l':
 				target_position = motors[index].position - 1;
 				if(motors[index].position != zero_degrees) {
-					Green_LED_Off();
-					Red_LED_On();
-					move_servo(index, &motors[index], target_position); 
-					Red_LED_Off();
-					Green_LED_On();
+					current_delay_time = move_servo(index, &motors[index], target_position);
+					move_command_entered = 1;
 				}
 				else {
 					usart_write_simple("");
@@ -151,11 +149,8 @@ int process_user_input(char commands[COMMAND_BUFFER_SIZE]){
 			case 'r':
 				target_position = motors[index].position + 1;
 				if(motors[index].position != one_hundred_and_sixty_degrees) {
-					Green_LED_Off();
-					Red_LED_On();
-					move_servo(index, &motors[index], target_position); 
-					Red_LED_Off();
-					Green_LED_On();
+					current_delay_time = move_servo(index, &motors[index], target_position);
+					move_command_entered = 1;
 				}
 				else {
 					usart_write_simple("");
@@ -173,9 +168,14 @@ int process_user_input(char commands[COMMAND_BUFFER_SIZE]){
 		}
 	}
 
-	// If the motor is moved, make sure we delay appropriately
-	if(move_command_entered){ 
-		// Delay the appropriate number of seconds
+	// If the motor is moved, make sure we delay appropriately (this uses the blocking method because single moves
+	// can block)
+	if(move_command_entered){
+		Green_LED_Off();
+		Red_LED_On();
+		delay(current_delay_time);
+		Red_LED_Off();
+		Green_LED_On();
 	}
 	return recipe_command_entered;
 }
@@ -427,6 +427,188 @@ void process_recipe(){
 }
 
 /*
+	This funciton handles reading in the recipe and processing the commands included in
+	each recipe
+*/
+void process_recipe_no_block(){
+	usart_write_simple("");
+	usart_write_simple("Processing recipes ...");
+	int recipe_ended, paused, keep_going = 0;
+	char pause = NULL;
+
+	// Start the servo timers
+	start_timers();
+	
+	// We need to iterate through each item in each recipe, but don't progress past any recipe length
+	for(int i = 0; i < MAX_RECIPE_SIZE; i++){
+			
+		// Break the current loop, go to the next loop (the next servo)
+		if(recipe_ended){
+			recipe_ended = 0;
+			break;
+		}
+	
+		// For each servo perform each action
+		for(int servo_index = 0; servo_index < NUMBER_OF_SERVOS; servo_index++){
+			
+			// The motor has been iussued a recipe command and is active
+			if(motors[servo_index].status == active){
+
+				// Check if the motor is still moving
+				if(servo_ready(servo_index, motors)){
+
+					// Check if the user paused execution, if they did, make both servos inactive, and break
+					// The outer loop will be handled by the servo being inactive
+					pause = usart_read_no_block();
+					if(check_for_valid_input(&pause, VALID_P)){
+						usart_terminal_character_simple();
+						usart_real_time_write(pause, PRINT_NEWLINE);
+						usart_write_data_string("Pausing recipe execution on servo %d ...", servo_index);
+						motors[servo_index].status = inactive;
+
+						// Indicate we have paused so that we do not print out the 'Recipe execution completed' message
+						paused = 1;
+						break;
+					}
+
+					// Get the current instruction object from the recipe
+					current_instruction instruction = get_instruction(recipes[motors[servo_index].recipe_index][motors[servo_index].recipe_instruction_index]);
+
+					// Perform all of the opcodes
+					switch(instruction.opcode){
+						
+						// Servo movement
+						case MOV:
+
+							// The instruction is in bounds
+							if(instruction_in_bounds(instruction)){
+								move_servo(servo_index, &motors[servo_index], instruction.parameter);
+
+								// We performed an action, increment the counter in the motor data in case we a pause
+								motors[servo_index].recipe_instruction_index++;
+							}
+							
+							// If the instruction is out of bounds fail and make the user restart
+							else{
+								usart_write_simple("");
+								usart_write_data_string("ERROR: Current instruction parameter out of bounds "BYTE_TO_BINARY_PATTERN, BYTE_TO_BINARY(instruction.parameter));
+								
+								// Check with the user if they want to keep executing recipes, if so, increment the recipe instruction
+								keep_going = exit_program();
+								if(keep_going){
+									motors[servo_index].recipe_instruction_index++;
+								}
+							}
+							break;
+
+						// Delay by a number of 1/10 of a seconds
+						case WAIT:
+
+							// Delay the appropriate amount of time
+							delay(ONE_STEP_SERVO_DELAY * instruction.parameter);
+
+							// Incement the instruction counter
+							motors[servo_index].recipe_instruction_index++;
+							break;
+
+						// Indicate that we are looping instructions
+						case LOOP:
+
+							// This is an error, do not accept loops inside loops
+							if(motors[servo_index].inside_recipe_loop == INSIDE_RECIPE_LOOP){ 
+								usart_write_simple("");
+								usart_write_data_string("ERROR: Current instruction parameter indicates nested loops "BYTE_TO_BINARY_PATTERN, BYTE_TO_BINARY(instruction.parameter));
+
+								// Check with the user if they want to keep executing recipes, if so, increment the recipe instruction
+								keep_going = exit_program();
+								if(keep_going){
+									motors[servo_index].recipe_instruction_index++;
+									motors[servo_index].inside_recipe_loop = INSIDE_RECIPE_LOOP_DEFAULT;
+								}
+							}
+							else{
+
+								// Recipe instruction index increments here as well
+								motors[servo_index].recipe_instruction_index++;
+								motors[servo_index].inside_recipe_loop = INSIDE_RECIPE_LOOP;
+								motors[servo_index].recipe_loop_index = motors[servo_index].recipe_instruction_index;
+								motors[servo_index].recipe_loop_count = instruction.parameter - RECIPE_LOOP_MODIFIER;
+							}
+							break;
+
+						// Indicate that we are at the end of the loop section
+						case END_LOOP:
+							
+							// check if we are in a loop, if not then we have found an error and need to quit
+							if(motors[servo_index].inside_recipe_loop != INSIDE_RECIPE_LOOP){ 
+								usart_write_simple("");
+								usart_write_data_string("ERROR: Current instruction parameter indicates nested loops "BYTE_TO_BINARY_PATTERN, BYTE_TO_BINARY(instruction.parameter));
+
+								// Check with the user if they want to keep executing recipes, if so, increment the recipe instruction
+								keep_going = exit_program();
+								if(keep_going){
+									motors[servo_index].recipe_instruction_index++;
+									motors[servo_index].inside_recipe_loop = INSIDE_RECIPE_LOOP_DEFAULT;
+								}
+							} 
+							else{
+								
+								// This section indicates the end of the loop
+								if(motors[servo_index].recipe_loop_count < LOOP_END_COUNT){
+									
+									motors[servo_index].inside_recipe_loop = INSIDE_RECIPE_LOOP_DEFAULT;
+									motors[servo_index].recipe_instruction_index++;
+								}
+
+								// If we are still in the loop, then move back to the first index
+								else {
+
+									motors[servo_index].recipe_instruction_index = motors[servo_index].recipe_loop_index;
+
+									// Decrement our counter.  When this reaches below 0 we stop looping
+									motors[servo_index].recipe_loop_count--;
+								}
+							}
+							break;
+
+						// The end of the recipe
+						case RECIPE_END:
+							recipe_ended = 1;
+
+							// Reset our stats back to expected positions
+							fixup_servo_data(servo_index, &motors[servo_index]);
+
+							break;
+
+						// Invalid command found
+						default:
+							usart_write_data_string("Invalid recipe command encountered "BYTE_TO_BINARY_PATTERN, BYTE_TO_BINARY(instruction.opcode));
+							
+							// Check with the user if they want to keep executing recipes, if so, increment the recipe instruction
+							keep_going = exit_program();
+							if(keep_going){
+								motors[servo_index].recipe_instruction_index++;
+							}
+							break;
+					}
+				}
+			}
+		}
+	}
+	
+	// Only fixup the recipe data if the maximum recipe size was reached and we didnt fix it earlier
+	fixup_servo_data_multiple(motors);
+
+	// Only print our status out if we didn't pause
+	if(!paused){
+		usart_write_simple("Recipe execution completed");
+	}
+	
+	// Now stop the timers from counting
+	stop_timers();
+}
+
+/*
 	The main fucntion runs the main loop, that is:
 		1. Initialize the various timers, clocks, pins, and LED's
 		2. Print the user input banner
@@ -448,6 +630,7 @@ int main(void){
 	UART2_Init();
 	gpio_init();
 	timer_init();
+	servo_timers_init();
 	servo_data_init(motors);
 
 	// Print our banner, let the user know how to proceed
@@ -465,7 +648,7 @@ int main(void){
 			// Only process recipes if we got a command to run one 
 			if(recipe_command_entered){
 				Red_LED_On();
-				process_recipe();
+				process_recipe_no_block();
 				Red_LED_Off();
 			}
 	}

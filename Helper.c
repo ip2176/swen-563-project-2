@@ -3,6 +3,7 @@
 */
 
 #include "Helper.h"
+#include "Timer.h"
 
 /*
   Check the input string and see if we have a valid character in it.
@@ -111,6 +112,23 @@ void delay(uint32_t delay_time) {
 }
 
 /*
+	This helper function calculates the delay to be used when moving a servo
+
+	Input:
+		last_position - The last position the servo was in
+		new_position  - The next position for the servo
+
+	Output:
+		This function returns the total delay time the servo should wait for
+		the given move
+*/
+uint16_t calculate_delay(position last_position, position new_position){
+	uint16_t number_of_steps = 0;
+	number_of_steps = abs(last_position - new_position);
+	return ONE_STEP_SERVO_DELAY * number_of_steps;
+}
+
+/*
   This funtion sets the TIM2 output correctly, then updates our data 
 	struct so we hold the correct data, then finally delays before allowing
 	the next movement
@@ -119,11 +137,13 @@ void delay(uint32_t delay_time) {
 		motor_num 	    - An integer that specifies the number of the motor to move
 		motor     	    - The motor struct refernce to update
     target_position - The position we want to move to
+
+	Output:
+		A 16 bit unsigned integer corresponding to the total time we should delay for the move
 */
-void move_servo(int motor_num, servo_data *motor, uint16_t target_position){
+uint16_t move_servo(int motor_num, servo_data *motor, uint16_t target_position){
 	position last_position;
 	position new_position = (position)target_position;
-	uint16_t number_of_steps = 0;
 
 	// Move the servo first
 	if(motor_num == 0){
@@ -136,8 +156,9 @@ void move_servo(int motor_num, servo_data *motor, uint16_t target_position){
 	// Update the position data and delay appropriately
 	last_position = motor->position;
 	motor->position = new_position;
-	number_of_steps = abs(last_position - new_position);
-	delay(ONE_STEP_SERVO_DELAY * number_of_steps);
+	motor->target_position = (position)target_position;
+	motor->last_start_time = get_current_time(motor_num);
+	return calculate_delay(last_position, new_position);
 }
 
 /*
@@ -168,6 +189,8 @@ void servo_data_init(servo_data *motors){
 		motors[servo_data_index].recipe_loop_count = RECIPE_LOOP_COUNT_DEFAULT;
 		motors[servo_data_index].recipe_loop_index = RECIPE_LOOP_INDEX_DEFAULT;
 		motors[servo_data_index].status = inactive;
+		motors[servo_data_index].last_start_time = LAST_START_TIME_DEFAULT;
+		motors[servo_data_index].target_position = TARGET_POSITION_DEFAULT;
 	}
 }
 
@@ -271,6 +294,7 @@ void fixup_servo_data(int index, servo_data *motor){
 	motor->recipe_loop_count = RECIPE_LOOP_COUNT_DEFAULT;
 	motor->recipe_loop_index = RECIPE_LOOP_INDEX_DEFAULT;
 	motor->inside_recipe_loop = INSIDE_RECIPE_LOOP_DEFAULT;
+	motor->target_position = TARGET_POSITION_DEFAULT;
 }
 
 /*
@@ -286,5 +310,31 @@ void fixup_servo_data_multiple(servo_data *motors){
 		if(motors[servo_data_index].recipe_instruction_index != RECIPE_INSTRUCTION_INDEX_DEFAULT){
 			fixup_servo_data(servo_data_index, &motors[servo_data_index]);
 		}
+	}
+}
+
+/*
+	This helper function determines if a servo is ready to move yet
+*/
+int servo_ready(int servo_num, servo_data *motors){
+	uint16_t current_time = get_current_time(servo_num);
+	uint16_t last_start_time = motors[servo_num].last_start_time;
+	position last_position;
+	position new_position = motors[servo_num].target_position;
+	uint16_t total_delay = 0;
+
+	// Calculate the delay time
+	last_position = motors[servo_num].position;
+	total_delay = calculate_delay(last_position, new_position);
+	usart_write_data_string("Total delay: %lu", total_delay);
+	usart_write_data_string("Current_time: %lu", current_time);
+	usart_write_data_string("Last start time: %lu", last_start_time);
+	
+	// figure out if the servo is ready to move yet
+	if(current_time - last_start_time >= total_delay){
+		return SUCCESS;
+	}
+	else {
+		return FAILURE;
 	}
 }

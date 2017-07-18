@@ -26,6 +26,8 @@
 #define PARAMETER_MASK (31) 														 // This represents the following: 0b00011111
 
 // General defines
+#define SERVO_0 (0)																			 // Used when selecting timer related items for servo 0
+#define SERVO_1 (1)																			 // Used when selecting timer related items for servo 1
 #define INSIDE_RECIPE_LOOP (1)													 // Used to determine if we are inside a recipe loop
 #define LOOP_END_COUNT (0)															 // Used to determine the of the end of a recipe loop
 #define RECIPE_LOOP_MODIFIER (1)												 // We subtract one from the loop count to get the length not the size
@@ -78,6 +80,42 @@
 #define TIMER_2_AUTOLOAD_PRELOAD (0x00000080)						 // Set TIM2 to autoload preloaded values
 #define TIMER_2_CHAN1_CHAN2_ENABLE_OUTPUT (0x00000011)	 // Enable channel 1 and 2 as output on TIM2
 
+// Define our CHAN 1 Timer, used for timing the 
+// movement of servo 0
+// Defines for the TIM3 timer to make the constants more human readbale
+#define TIMER_3_ENABLE (RCC_APB1ENR1_TIM3EN)             // This allow us to enable the TIM3 timer
+#define TIMER_3 (RCC->APB1ENR1)                          // The timer 2 register
+#define TIMER_3_PRESCALER (TIM3->PSC)                    // The timer 2 presclater 
+#define TIMER_3_PRESCALER_ENABLE (TIM3->EGR)             // Memory are for enabling the prescaler for TIM3
+#define TIMER_3_PRESCALER_FORCE_LOAD (TIM_EGR_UG)        // Force the reload of the precaler value
+#define TIMER_3_CAPTURE_INPUT (TIM3->CCER)               // The TIM3 input memory area
+#define TIMER_3_CAPTURE_COMPARE (TIM3->CCMR1)            // The TIM3 capture/compare memory area
+#define TIMER_3_CAPTURE  (TIM3->CR1)                     // The memory area to enable capturing
+#define TIMER_3_CLOCK_TIMER_RESULTS (TIM3->CCR1)         // The TIM3 clock (where we get the measurement results)
+#define TIMER_3_COUNT (TIM3->CNT)                        // The TIM3 count
+#define TIMER_3_CAPTURE_SET_TO_INPUT (ENABLE)            // Set capture compare to input
+#define TIMER_3_ENABLE_INPUT_CAPTURE (ENABLE)            // Enable input capture
+#define TIMER_3_DISABLE_INPUT_CAPTURE (DISABLE)          // Disable input capture
+#define TIMER_3_4_PRESCLAER_RATIO (80)                   // The TIM3 and TIM4 timer starts in 80Mhz so divide it by 80 so we match the GPIO clock rate of 1Mhz
+
+// Define our CHAN 2 Timer, used for timing the 
+// movement of servo 1
+// Defines for the TIM4 timer to make the constants more human readbale
+#define TIMER_4_ENABLE (RCC_APB1ENR1_TIM4EN)             // This allow us to enable the TIM4 timer
+#define TIMER_4 (RCC->APB1ENR1)                          // The timer 4 register
+#define TIMER_4_PRESCALER (TIM4->PSC)                    // The timer 4 presclater 
+#define TIMER_4_PRESCALER_ENABLE (TIM4->EGR)             // Memory are for enabling the prescaler for TIM4
+#define TIMER_4_PRESCALER_FORCE_LOAD (TIM_EGR_UG)        // Force the reload of the precaler value
+#define TIMER_4_CAPTURE_INPUT (TIM4->CCER)               // The TIM4 input memory area
+#define TIMER_4_CAPTURE_COMPARE (TIM4->CCMR1)            // The TIM4 capture/compare memory area
+#define TIMER_4_CAPTURE  (TIM4->CR1)                     // The memory area to enable capturing
+#define TIMER_4_CLOCK_TIMER_RESULTS (TIM4->CCR1)         // The TIM4 clock (where we get the measurement results)
+#define TIMER_4_COUNT (TIM4->CNT)                        // The TIM4 count
+#define TIMER_4_CAPTURE_SET_TO_INPUT (ENABLE)            // Set capture compare to input
+#define TIMER_4_ENABLE_INPUT_CAPTURE (ENABLE)            // Enable input capture
+#define TIMER_4_DISABLE_INPUT_CAPTURE (DISABLE)          // Disable input capture
+
+
 // Defines for the GPIO to make the constants more human readbale
 #define GPIO_CLOCK_ENABLE (RCC_AHB2ENR_GPIOAEN)          // This allows us to enable the GPIO timer
 #define GPIO_CLOCK (RCC->AHB2ENR)                        // The GPIO clock
@@ -100,6 +138,8 @@
 #define INSIDE_RECIPE_LOOP_DEFAULT (0)
 #define RECIPE_LOOP_COUNT_DEFAULT (0)
 #define RECIPE_LOOP_INDEX_DEFAULT (0)
+#define LAST_START_TIME_DEFAULT (0)
+#define TARGET_POSITION_DEFAULT (zero_degrees)
 
 // This was taken from here: https://stackoverflow.com/questions/111928/is-there-a-printf-converter-to-print-in-binary-format
 // Used for printing in binary format
@@ -115,7 +155,7 @@
 	(byte & 0x01 ? '1' : '0') 
 
 // Use this define for moving the servos
-#define ONE_STEP_SERVO_DELAY (200) 											 // The general time to move a servo one step (in milliseconds)
+#define ONE_STEP_SERVO_DELAY ((uint16_t)200) 						 // The general time to move a servo one step (in milliseconds)
 
 // Keep track of the state of the servo
 typedef enum {
@@ -143,6 +183,8 @@ typedef struct{
 	int recipe_loop_count;				// This tells us how many times we have looped in a recipe
 	int inside_recipe_loop;				// This tells us if we are inside a loop in a recipe
 	int recipe_loop_index;				// This tells us where we are in each loop inside the recipe
+	uint16_t last_start_time;     // This tells us the last time a motor started moving
+	position target_position;			// This is used when calculating if the motor is ready to move again yet
 } servo_data;
 
 // Use a struct to contain the current opcode and parameter while processing
