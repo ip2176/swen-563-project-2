@@ -117,33 +117,43 @@ void delay(uint32_t delay_time) {
 	Input:
 		last_position - The last position the servo was in
 		new_position  - The next position for the servo
+		recipe			  - This flag tells us if we are calculating the delay for a recipe or not
 
 	Output:
 		This function returns the total delay time the servo should wait for
 		the given move
 */
-uint16_t calculate_delay(position last_position, position new_position){
-	uint16_t number_of_steps = 0;
+uint16_t calculate_delay(position last_position, position new_position, int recipe){
+	uint16_t number_of_steps, total_delay = 0;
 	number_of_steps = abs(last_position - new_position);
-	return ONE_STEP_SERVO_DELAY * number_of_steps;
+
+	// Calculate the right delay
+	if(recipe){
+		total_delay = RECIPE_SERVO_DELAY * number_of_steps;
+	}
+	else {
+		total_delay = ONE_STEP_SERVO_DELAY * number_of_steps;
+	}
+	return total_delay;
 }
 
 /*
-  This funtion sets the TIM2 output correctly, then updates our data 
-	struct so we hold the correct data, then finally delays before allowing
-	the next movement
+  This funtion sets the TIM2 output correctly, then updates our data struct so we hold the correct data
 
 	Input:
-		motor_num 	    - An integer that specifies the number of the motor to move
-		motor     	    - The motor struct refernce to update
+		motor_num - An integer that specifies the number of the motor to move
+		motor     - The motor struct refernce to update
     target_position - The position we want to move to
+		recipe					- This flag tells us if we are calculating the delay for a recipe or not
 
 	Output:
 		A 16 bit unsigned integer corresponding to the total time we should delay for the move
 */
-uint16_t move_servo(int motor_num, servo_data *motor, uint16_t target_position){
+uint16_t move_servo(int motor_num, servo_data *motor, uint16_t target_position, int recipe){
 	position last_position;
 	position new_position = (position)target_position;
+	uint16_t current_time = get_current_time(motor_num);
+	uint16_t total_delay = calculate_delay(last_position, new_position, recipe);
 
 	// Move the servo first
 	if(motor_num == 0){
@@ -157,8 +167,9 @@ uint16_t move_servo(int motor_num, servo_data *motor, uint16_t target_position){
 	last_position = motor->position;
 	motor->position = new_position;
 	motor->target_position = (position)target_position;
-	motor->last_start_time = get_current_time(motor_num);
-	return calculate_delay(last_position, new_position);
+	motor->last_start_time = current_time;
+	motor->total_delay = total_delay;
+	return motor->total_delay;
 }
 
 /*
@@ -169,7 +180,9 @@ uint16_t move_servo(int motor_num, servo_data *motor, uint16_t target_position){
 		motor     	    - The motor struct refernce to update
 */
 void reset_servo(int motor_num, servo_data *motor){
-	move_servo(motor_num, motor, zero_degrees);
+
+	// We only call this function from the recipe, so calculate the delay appropriately
+	move_servo(motor_num, motor, zero_degrees, RECIPE_MOVE);
 }
 
 /*
@@ -191,6 +204,8 @@ void servo_data_init(servo_data *motors){
 		motors[servo_data_index].status = inactive;
 		motors[servo_data_index].last_start_time = LAST_START_TIME_DEFAULT;
 		motors[servo_data_index].target_position = TARGET_POSITION_DEFAULT;
+		motors[servo_data_index].total_delay = TOTAL_DELAY_DEFAULT;
+		motors[servo_data_index].recipe_status = idle;
 	}
 }
 
@@ -272,20 +287,28 @@ void increment_recipe(servo_data *motor){
 	Fixup the servo data on the given servo
 
 	Input:
-		index  - The motor servo data index
-		motors - The array of motor struct refernces to update
+		index   - The motor servo data index
+		motors  - The array of motor struct refernces to update
+		restart - A flag to tell this function if we are executing from a recipe or from entering 'b' 
 */
-void fixup_servo_data(int index, servo_data *motor){
-	usart_write_data_string("Recipe %d complete for servo %d, resetting servo %d to starting position ...", motor->recipe_index, index, index);
-						
+void fixup_servo_data(int index, servo_data *motor, int restart){
+
+	// Only print the recipe completion if we did not restart (enter 'b')
+	if(!restart){
+		usart_write_data_string("Recipe %d complete for servo %d, resetting servo %d to starting position ...", motor->recipe_index, index, index);
+		increment_recipe(motor);
+
+		// Set the servo back inactive
+		motor->status = inactive;
+	}
+	else {
+
+		// If we are resetting, make sure we go back to the first recipe
+		motor->recipe_index = RECIPE_INDEX_DEFAULT;
+	}
+	
 	// Reset the servo position back to 0 degrees so the next recipe starts in a known position
 	reset_servo(index, motor);
-
-	// Reset back to the first recipe if we have already completed all of the recipes
-	increment_recipe(motor);
-
-	// Set the servo back inactive
-	motor->status = inactive;
 
 	// Reset the instruction index
 	motor->recipe_instruction_index = RECIPE_INSTRUCTION_INDEX_DEFAULT;
@@ -295,20 +318,23 @@ void fixup_servo_data(int index, servo_data *motor){
 	motor->recipe_loop_index = RECIPE_LOOP_INDEX_DEFAULT;
 	motor->inside_recipe_loop = INSIDE_RECIPE_LOOP_DEFAULT;
 	motor->target_position = TARGET_POSITION_DEFAULT;
+	motor->total_delay = TOTAL_DELAY_DEFAULT;
+	motor->recipe_status = idle;
 }
 
 /*
 	Fixup the servo data if need be on all servos
 
 	Input:
-		motors - The array of motor struct refernces to update
+		motors  - The array of motor struct refernces to update
+		restart - A flag to tell this function if we are executing from a recipe or from entering 'b' 
 */
-void fixup_servo_data_multiple(servo_data *motors){
+void fixup_servo_data_multiple(servo_data *motors, int restart){
 
 	// Loop through each servo_data
 	for(int servo_data_index; servo_data_index < NUMBER_OF_SERVOS; servo_data_index++){
-		if(motors[servo_data_index].recipe_instruction_index != RECIPE_INSTRUCTION_INDEX_DEFAULT){
-			fixup_servo_data(servo_data_index, &motors[servo_data_index]);
+		if((motors[servo_data_index].status == active) || restart){
+			fixup_servo_data(servo_data_index, &motors[servo_data_index], restart);
 		}
 	}
 }
@@ -319,19 +345,60 @@ void fixup_servo_data_multiple(servo_data *motors){
 int servo_ready(int servo_num, servo_data *motors){
 	uint16_t current_time = get_current_time(servo_num);
 	uint16_t last_start_time = motors[servo_num].last_start_time;
-	position last_position;
-	position new_position = motors[servo_num].target_position;
-	uint16_t total_delay = 0;
+	uint16_t total_delay = motors[servo_num].total_delay;
 
-	// Calculate the delay time
-	last_position = motors[servo_num].position;
-	total_delay = calculate_delay(last_position, new_position);
-	usart_write_data_string("Total delay: %lu", total_delay);
-	usart_write_data_string("Current_time: %lu", current_time);
-	usart_write_data_string("Last start time: %lu", last_start_time);
+	//usart_write_data_string("Total delay: %lu", total_delay);
+	//usart_write_data_string("Current_time: %lu", current_time);
+	//usart_write_data_string("Last start time: %lu", last_start_time);
 	
-	// figure out if the servo is ready to move yet
-	if(current_time - last_start_time >= total_delay){
+	// Figure out if the servo is ready to move yet
+	if(abs(current_time - last_start_time) > total_delay){
+		return SUCCESS;
+	}
+	else {
+		return FAILURE;
+	}
+}
+
+/*
+	Helper function to determine if any servo is inactive
+
+	Input:
+		motors  - The array of motor struct refernces to check
+
+	Output:
+		This returns 1 if at least 1 servo is inactive, 0 otherwise
+*/
+int some_servo_inactive(servo_data *motors){
+	int servo_inactive = 0;
+	for(int servo_num = 0; servo_num < NUMBER_OF_SERVOS; servo_num++){
+		if(motors[servo_num].status == inactive){
+			servo_inactive = 1;
+			break;
+		}
+	}
+	return servo_inactive;
+}
+
+/*
+	Helper function to determine if both servos are inactive or paused
+
+	Input:
+		motors  - The array of motor struct refernces to check
+
+	Output:
+		This returns 1 if both servos are inactive or paused
+*/
+int both_servos_inactive_or_paused(servo_data *motors){
+	int stop = 0;
+	for(int servo_num = 0; servo_num < NUMBER_OF_SERVOS; servo_num++){
+			if((motors[servo_num].status == inactive) || (motors[servo_num].status == paused)){
+				stop += 1;
+			}
+	}
+
+	// Now check if both servos are inactive
+	if(stop == 2){
 		return SUCCESS;
 	}
 	else {

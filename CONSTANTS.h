@@ -26,8 +26,13 @@
 #define PARAMETER_MASK (31) 														 // This represents the following: 0b00011111
 
 // General defines
+#define MAX_DELAY (1000)																 // The maximum delay time possible for moving a servo
 #define SERVO_0 (0)																			 // Used when selecting timer related items for servo 0
 #define SERVO_1 (1)																			 // Used when selecting timer related items for servo 1
+#define RESTART (1)																			 // Used when fixing up the radio data when a b is entered
+#define NO_RESTART (0)																	 // Used when fixing up the radio data when a b is entered
+#define RECIPE_MOVE (1)																	 // Used when moving the servo in a recipe, used for calulating delay
+#define NON_RECIPE_MOVE (0)															 // Used when moving the servo outside a recipe, used for calulating delay
 #define INSIDE_RECIPE_LOOP (1)													 // Used to determine if we are inside a recipe loop
 #define LOOP_END_COUNT (0)															 // Used to determine the of the end of a recipe loop
 #define RECIPE_LOOP_MODIFIER (1)												 // We subtract one from the loop count to get the length not the size
@@ -96,7 +101,7 @@
 #define TIMER_3_CAPTURE_SET_TO_INPUT (ENABLE)            // Set capture compare to input
 #define TIMER_3_ENABLE_INPUT_CAPTURE (ENABLE)            // Enable input capture
 #define TIMER_3_DISABLE_INPUT_CAPTURE (DISABLE)          // Disable input capture
-#define TIMER_3_4_PRESCLAER_RATIO (80)                   // The TIM3 and TIM4 timer starts in 80Mhz so divide it by 80 so we match the GPIO clock rate of 1Mhz
+#define TIMER_3_4_PRESCLAER_RATIO (8000)                 // The TIM3 and TIM4 timer starts in 80Mhz so divide it by 80 so we match the GPIO clock rate of 1Mhz
 
 // Define our CHAN 2 Timer, used for timing the 
 // movement of servo 1
@@ -140,6 +145,7 @@
 #define RECIPE_LOOP_INDEX_DEFAULT (0)
 #define LAST_START_TIME_DEFAULT (0)
 #define TARGET_POSITION_DEFAULT (zero_degrees)
+#define TOTAL_DELAY_DEFAULT (0)
 
 // This was taken from here: https://stackoverflow.com/questions/111928/is-there-a-printf-converter-to-print-in-binary-format
 // Used for printing in binary format
@@ -154,14 +160,22 @@
 	(byte & 0x02 ? '1' : '0'), \
 	(byte & 0x01 ? '1' : '0') 
 
-// Use this define for moving the servos
+// Use these defines for calculating servo delays
 #define ONE_STEP_SERVO_DELAY ((uint16_t)200) 						 // The general time to move a servo one step (in milliseconds)
+#define RECIPE_SERVO_DELAY ((uint16_t)1000)						   // The recipes need a different scale for the time
 
 // Keep track of the state of the servo
 typedef enum {
 	inactive,
-	active
+	active,
+	paused,
 } servo_status;
+
+// Keep track of the status of the servos while in a recipe
+typedef enum {
+	idle,
+	running,
+} recipe_status;
 
 // This enumerator allows us to select positions without # defining each of them
 typedef enum {
@@ -185,6 +199,8 @@ typedef struct{
 	int recipe_loop_index;				// This tells us where we are in each loop inside the recipe
 	uint16_t last_start_time;     // This tells us the last time a motor started moving
 	position target_position;			// This is used when calculating if the motor is ready to move again yet
+	uint16_t total_delay;					// This is used when calculating if the motor is ready to move again yet
+	recipe_status recipe_status;  // Used to keep track of the servos while executing recipes
 } servo_data;
 
 // Use a struct to contain the current opcode and parameter while processing

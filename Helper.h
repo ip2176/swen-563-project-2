@@ -51,12 +51,13 @@ void delay(uint32_t delay_time);
 	Input:
 		last_position - The last position the servo was in
 		new_position  - The next position for the servo
+		recipe			  - This flag tells us if we are calculating the delay for a recipe or not
 
 	Output:
 		This function returns the total delay time the servo should wait for
 		the given move
 */
-uint16_t calculate_delay(position last_position, position new_position);
+uint16_t calculate_delay(position last_position, position new_position, int recipe);
 
 /*
   This funtion sets the TIM2 output correctly, then updates our data struct so we hold the correct data
@@ -65,11 +66,12 @@ uint16_t calculate_delay(position last_position, position new_position);
 		motor_num - An integer that specifies the number of the motor to move
 		motor     - The motor struct refernce to update
     target_position - The position we want to move to
+		recipe					- This flag tells us if we are calculating the delay for a recipe or not
 
 	Output:
 		A 16 bit unsigned integer corresponding to the total time we should delay for the move
 */
-uint16_t move_servo(int motor_num, servo_data *motor, uint16_t target_position);
+uint16_t move_servo(int motor_num, servo_data *motor, uint16_t target_position, int recipe);
 
 /*
 	This wrapper function resets the target servo to zero degrees
@@ -145,20 +147,44 @@ void increment_recipe(servo_data *motor);
 	Fixup the servo data on the given servo
 
 	Input:
-		index  - The motor servo data index
-		motors - The array of motor struct refernces to update
+		index   - The motor servo data index
+		motors  - The array of motor struct refernces to update
+		restart - A flag to tell this function if we are executing from a recipe or from entering 'b' 
 */
-void fixup_servo_data(int index, servo_data *motor);
+void fixup_servo_data(int index, servo_data *motor, int restart);
 
 /*
 	Fixup the servo data if need be on all servos
 
 	Input:
-		motors - The array of motor struct refernces to update
+		motors  - The array of motor struct refernces to update
+		restart - A flag to tell this function if we are executing from a recipe or from entering 'b' 
 */
-void fixup_servo_data_multiple(servo_data *motors);
+void fixup_servo_data_multiple(servo_data *motors, int restart);
 
 /*
 	This helper function determines if a servo is ready to move yet
 */
 int servo_ready(int servo_num, servo_data *motors);
+
+/*
+	Helper function to determine if any servo is inactive
+
+	Input:
+		motors  - The array of motor struct refernces to check
+
+	Output:
+		This returns 1 if at least 1 servo is inactive, 0 otherwise
+*/
+int some_servo_inactive(servo_data *motors);
+
+/*
+	Helper function to determine if both servos are inactive or paused
+
+	Input:
+		motors  - The array of motor struct refernces to check
+
+	Output:
+		This returns 1 if both servos are inactive or paused
+*/
+int both_servos_inactive_or_paused(servo_data *motors);
